@@ -1,28 +1,60 @@
-const express = require('express');
-const cors = require('cors');
-const app = express();
+const express = require("express");
+const cors = require("cors");
+const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
 
+const app = express();
+const prisma = new PrismaClient();
 const PORT = 3000;
 
-// Enable CORS for cross-origin requests
-app.use(cors());
-// Middleware
+// ✅ Fix CORS (Allow frontend requests)
+app.use(cors({
+  origin: "http://localhost:5173", // Adjust this to match your frontend URL
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+
 app.use(express.json());
 
-// Routes
-app.get('/', (req, res) => {
-    res.send('Hello, World!');
+// ✅ Handle preflight requests explicitly
+app.options("*", cors());
+
+app.get("/", (req, res) => {
+  res.send("Hello, World!");
 });
 
-app.post('/user', (req, res) => {
-    console.log(req.body); // Log the incoming data
+// ✅ Update User Signup Route
+app.post("/user", async (req, res) => {
+  try {
+    const { fullName, email, password } = req.body;
 
-    // Add logic to handle user creation, like saving to the database (if required).
-    // Assuming the user is successfully created, send the success response:
-    res.status(201).json({ message: "User created successfully" });
+    // Validate input
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user in database
+    const user = await prisma.user.create({
+      data: { name: fullName, email, password: hashedPassword },
+    });
+
+    res.status(201).json({ message: "User created successfully", user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
 });
 
-// Start the server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

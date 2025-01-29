@@ -13,23 +13,23 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (password !== confirmPassword) {
       toast.error("Passwords do not match!");
       return;
     }
-
+  
     try {
       // Send signup data to the backend
       const response = await axios.post("http://localhost:3000/user", {
+        fullName,  // ✅ Fix: Send fullName instead of name
         email,
-        fullName,
         password,
       });
-
+  
       if (response.status === 201) {
         toast.success("User created successfully!");
-        setTimeout(() => navigate("/login"), 3000); // Redirect after 3 seconds
+        setTimeout(() => navigate("/login"), 3000);
       }
     } catch (error) {
       if (error.response) {
@@ -39,6 +39,7 @@ const Signup = () => {
       }
     }
   };
+  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
